@@ -1,0 +1,110 @@
+rm(list = ls())
+setwd("[your working directory here]")
+getwd()
+
+library(readr) # package for fast read rectangular data
+library(dplyr) # package for data manipulation
+library(estimatr) # package for commonly used estimators with robust SE
+library(psych) # package containing many functions useful for data analysis
+
+#Question 1:
+
+#First access the relevant data:
+
+BW = read_csv("birthweight_smoking.csv")
+
+#a)
+
+reg1 = lm_robust(birthweight ~ smoker,
+                 data = BW,
+                 se_type = "stata")
+summary(reg1)
+#b)
+
+reg2 = lm_robust(birthweight ~ smoker + 
+                   alcohol + nprevist,
+                 data = BW,
+                 se_type = "stata")
+summary(reg2)
+
+#c)
+reg1$coefficients
+reg2$coefficients
+
+#The smoker coefficient is substantially
+#smaller in reg2, indicating we have have
+#OMV in reg1
+
+predict(reg2, newdata = data.frame(smoker = 1,
+                                   alcohol = 0,
+                                   nprevist = 8))
+
+#Checking R^2 and adjusted R^2 through the summary
+#of reg2, they are very similar. This is because
+#the sample size is very large relative to the number
+#of parameters in the model (see the formula for adjusted
+#R^2 for why this matters)
+
+#c)
+
+reg3 = lm_robust(birthweight ~
+                   smoker + alcohol +
+                   tripre0 + tripre2 +
+                   tripre3,
+                 data = BW,
+                 se_type = "stata")
+summary(reg3)
+
+#See solutions on blackboard for answers to 
+#the subsections of (c), no coding is required
+#for these parts (all necessary values are contained
+#in the summary for reg 3)
+
+#Question 2
+
+#a)
+rm(list = ls())
+
+#Different way of excluding Malta than what we have used before:
+
+Growth = read_csv("Growth.csv") %>%
+  filter(country_name != "Malta")
+
+attach(Growth)
+
+describe(data.frame(growth, tradeshare, yearsschool,
+                    oil, rev_coups, assasinations, rgdp60))
+#note here that "assasinations" has a missing s
+
+
+#b)
+
+reg4 = lm_robust(growth ~ tradeshare + yearsschool + oil + rev_coups + assasinations +
+                   rgdp60, data = Growth, se_type = "stata")
+summary(reg4)
+
+describe(data.frame(growth, tradeshare, yearsschool,
+                    oil, rev_coups, assasinations, rgdp60))$mean
+
+predict(reg4, newdata = data.frame(tradeshare = mean(tradeshare),
+                                   yearsschool = mean(yearsschool),
+                                   oil = mean(oil),
+                                   rev_coups = mean(rev_coups),
+                                   assasinations = mean(assasinations),
+                                   rgdp60 = mean(rgdp60)))
+
+#c)
+predict(reg4, newdata = data.frame(tradeshare = mean(tradeshare) + sd(tradeshare),
+                                   yearsschool = mean(yearsschool),
+                                   oil = mean(oil),
+                                   rev_coups = mean(rev_coups),
+                                   assasinations = mean(assasinations),
+                                   rgdp60 = mean(rgdp60)))
+
+#d) The oil variable is 0 in all observations, 
+#so including it leads to perfect multicolinearity,
+#as there is a perfect linear relationship bewteen it
+#and the constant regression term, 1, ie Oil + 1 = 1.
+#Because oil is 0 in all observations, we may set the coefficient
+#on oil to be any value we like without affecting the regression,
+#since it will always be multiplied by 0.
