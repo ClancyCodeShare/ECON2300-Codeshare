@@ -1,0 +1,118 @@
+rm(list = ls())
+setwd("[your working directory here]")
+getwd()
+
+install.packages("car")
+
+library(readr) # package for fast read rectangular data
+library(dplyr) # package for data manipulation
+library(estimatr) # package for commonly used estimators with robust SE
+library(texreg) # package converting R regression output to LaTeX/HTML tables
+library(car) # package for functions used in "An R Companion to Applied Regression
+
+#Question 1
+
+BW = read_csv("birthweight_smoking.csv")
+#Parts 1,2,3
+reg1 = lm_robust(birthweight ~ smoker, data = BW, se_type = "stata")
+reg2 = lm_robust(birthweight ~ smoker + alcohol + nprevist, data = BW, se_type = "stata")
+reg3 = lm_robust(birthweight ~ smoker + alcohol + nprevist + unmarried, data = BW,
+                 se_type = "stata")
+
+#This regression is for part f
+reg4 = lm_robust(birthweight ~ smoker + alcohol + nprevist + unmarried + age + educ,
+                 data = BW, se_type = "stata")
+
+#a)
+#To produce a latex table of your regressions:
+texreg(list(reg1, reg2, reg3, reg4), include.ci = F, caption.above =
+         T)
+
+#Or to print a table you can read in rstudio:
+screenreg(list(reg1, reg2, reg3, reg4), include.ci = F, caption.above =
+            T)
+
+#b)
+#Could calculate by hand:
+CI = c(reg1$coefficients[2] - 1.96*reg1$std.error[2],
+       reg1$coefficients[2] + 1.96*reg1$std.error[2])
+CI
+#Can also observe confidence intervals from the summaries of each reg.
+#Repeat for each regression
+
+#c) reg1 smoker coefficient appears to have OMV, reg2 includes some plausible
+#omitted variables and the smoker variable estimate changes substantially
+
+#d) again, reg2 smoker coefficient appears to have OMV,
+#adding extra variables in reg3 leads to another substantial change in the coef
+
+#e)
+
+CI = c(reg3$coefficients[5] - 1.96*reg3$std.error[5],
+       reg3$coefficients[5] + 1.96*reg3$std.error[5])
+CI
+
+#95% confidence interval excludes 0, therefore we have a statistically
+#significant estimate.
+
+#The coefficient has a large magnitude, 187 grams is about 5% of the mean
+#baby weight, so a noteworthy difference.
+
+187/mean(BW$birthweight)
+
+#Unmarried is a control variable. It captures the effects of many omitted factors
+#that might correlated with marital status. Note, the unmarried variable will
+#likely suffer from OMV because of this, but the important thing is that it allows us
+#to virtually eliminate OMV in the smoker coefficient estimate.
+
+
+
+#Question 2
+
+#a) See answers on blackboard for a detailed explanation
+
+
+#b)
+rm(list = ls())
+EH = read_csv("Earnings_and_Height.csv") %>%
+  mutate(lt_hs = as.numeric(educ < 12), hs = as.numeric(educ == 12),
+         col = as.numeric(educ >= 16), some_col = 1 - lt_hs - hs - col)
+attach(EH)
+
+reg1 = lm_robust(earnings ~ height, data = subset(EH, sex != "1:male"), se_type = "stata")
+reg2 = lm_robust(earnings ~ height + lt_hs + hs + some_col,
+                 data = subset(EH, sex != "1:male"), se_type = "stata")
+reg3 = lm_robust(earnings ~ height, data = subset(EH, sex == "1:male"), se_type = "stata")
+reg4 = lm_robust(earnings ~ height + lt_hs + hs + some_col,
+                 data = subset(EH, sex == "1:male"), se_type = "stata")
+
+#To produce a latex table of your regressions:
+texreg(list(reg1, reg2, reg3, reg4), include.ci = F, caption.above =
+         T)
+
+#Or to print a table you can read in rstudio:
+screenreg(list(reg1, reg2, reg3, reg4), include.ci = F, caption.above =
+            T)
+
+#i) some support for the proposed explanation, adding the proxy variables
+#in reg2 substantially decreases the predicted coefficient for height
+
+#ii) col is omitted to avoid a dummy variable trap
+
+#iii)
+# test linear hypothesis after regression
+linearHypothesis(reg2, c("lt_hs=0", "hs=0", "some_col=0"), test=c("F"))
+
+#iv) negative values for each education dummy variable, showing that col = 1
+#gives the highest estimated earnings, other things being equal. Additionally,
+#the education dummies have a smaller negative estiamte for higher levels of
+#of education. This suggests that more education is related with greater earnings
+
+#c)
+
+#Regressions for males are listed in the tables made in part b).
+#To conduct the hypothesis test in this case:
+
+linearHypothesis(reg4, c("lt_hs=0", "hs=0", "some_col=0"), test=c("F"))
+
+
